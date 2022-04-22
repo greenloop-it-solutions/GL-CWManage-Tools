@@ -1,0 +1,26 @@
+WBS,Type,Summary,Time Budget,Priority
+1,Phase,Planning Phase,,
+1.1,Ticket,Project Research and Quoting,2,
+1.2,Ticket,Project Planning Meeting,2,
+2,Phase,Prep Phase,,
+2.1,Ticket,Create and Prep 365 Tenant,2,
+,Task,This task should be sequence #1 on the ticket it falls below,,1
+,Task,This task should be sequence #2,,2
+,Task,This task should be sequence #3,,3
+,Internal Note,This should be an internal note on the ticket it falls below,,
+,Internal Note,This should be an additional internal note on the ticket it falls below,,
+,Description Note,This should be a description note on the ticket it falls below,,
+2.2,Ticket,Create accounts,1,
+2.3,Phase,sub-phase for Work with individual users,,
+2.3.1,Ticket,Here's a test sub-ticket with no time budget,,
+2.4,Ticket,Template ticket for individual users,0.5,
+,Task,This task should be sequence #1 on ticket 2.4,,1
+,Task,This task should be sequence #2 on ticket 2.4,,2
+,Task,This task should be sequence #3 on ticket 2.4,,3
+3,Phase,Cutover and Follow-Up,,
+3.1,Ticket,Project Cutover,2,
+,Task,This task should be associated with 3.1,,1
+4,Phase,Wrap-up,,
+4.1,Ticket,Update documentation,1,
+4.2,Ticket,Technical Audit,1,
+4.3,Ticket,Billing Audit,0.25,
