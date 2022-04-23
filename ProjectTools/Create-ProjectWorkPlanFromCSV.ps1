@@ -246,7 +246,7 @@ foreach ($item in $project) {
     switch ($item.Type) {
         'Phase' {
             Write-Host "Creating Phase $($item.WBS) - $($item.Summary)`n" -ForegroundColor Yellow
-            if ($item.WBS.Contains('.')) {
+            if ($item.WBS.Length -eq 3) {
                 # found a sub-phase
                 $phaseID = ((Get-CWProjectTicketPhase -TicketID $parentProjectID).GetEnumerator() | Where-Object {$_.wbsCode -eq $item.WBS[0]}).id
                 New-CWProjectTicketPhase -TicketID $parentProjectID -Description $item.Summary -ParentPhaseID $phaseID
@@ -256,7 +256,12 @@ foreach ($item in $project) {
         }
         'Ticket' {
             Write-Host "Creating Ticket $($item.WBS) - $($item.Summary) - $($item.'Time Budget')`n" -ForegroundColor Yellow
-            $phaseID = ((Get-CWProjectTicketPhase -TicketID $parentProjectID).GetEnumerator() | Where-Object {$_.wbsCode -eq $item.WBS[0]}).id
+            if ($item.WBS.Length -eq 5) {
+                # found a ticket belonging to a sub-phase
+                $phaseID = ((Get-CWProjectTicketPhase -TicketID $parentProjectID).GetEnumerator() | Where-Object {$_.wbsCode -eq $item.WBS.Substring(0, 3)}).id
+            } else {
+                $phaseID = ((Get-CWProjectTicketPhase -TicketID $parentProjectID).GetEnumerator() | Where-Object {$_.wbsCode -eq $item.WBS[0]}).id
+            }
             $recentTicketID = (New-CWProjectTicket -TicketID $parentProjectID -Summary $item.Summary -BudgetHours $item.'Time Budget' -Phase @{id = $phaseID}).id
         }
         'Task' {
