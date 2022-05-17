@@ -121,7 +121,7 @@ do {
     # Build the Work Plan for export
     # Sorting by WBS code allows us to insert all tasks and notes sequentially based on item type
     [List[object]]$projectWorkPlan = @()
-    $combinedObjects = ($projectPhases + $projectTickets) | Sort-Object {[regex]::Replace($_.WBS, '\d+', {$args[0].Value.PadLeft(20)})}
+    $combinedObjects = ($projectPhases + $projectTickets) | Sort-Object {[regex]::Replace($_.WBS, '\d+', {$args[0].Value.PadLeft(2)})}
 
     foreach ($item in $combinedObjects) {
         if ($item.Type -eq 'Phase') {
