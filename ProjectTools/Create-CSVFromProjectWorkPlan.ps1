@@ -10,6 +10,7 @@
     Version 1.0 - Initial release
 #>
 using namespace System.Runtime.InteropServices
+using namespace System.Collections.Generic
 
 # Install the 'ConnectWiseMangeAPI' module if missing
 $moduleName = 'ConnectWiseManageAPI'
@@ -21,7 +22,6 @@ if (Get-Module -ListAvailable | Where-Object {$_.Name -eq $moduleName}) {
     Import-Module $moduleName
 }
 
-# Connection information
 $manageServerFqdn = Read-Host "Manage Server FQDN"
 $connectWiseCompany = Read-Host "ConnectWise Company ID"
 $publicAPIKey = Read-Host "PublicAPIKey"
@@ -47,16 +47,16 @@ $connection = @{
 # Make the connection to Manage
 Connect-CWM @connection
 
-# run at least once; we will prompt at the end to see whether the user wants to run again.
+# Run at least once; we will prompt at the end to see whether the user wants to run again.
 do {
     # Prompt for the project ID and confirm it exists
     do {
-        $parentProjectID = Read-Host "Provide the Project ID of the Manage Project you want to generate a CSV export of."
-        $projectFound = Get-CWMProject -id $parentProjectID -ErrorAction SilentlyContinue | Select-Object -ExpandProperty name
+        $parentProjectID = Read-Host "Provide the Project ID of the Manage Project you want to generate a CSV export of"
+        $projectFound = Get-CWMProject -id $parentProjectID -ErrorAction SilentlyContinue | Select-Object -ExpandProperty id
         if (-not $projectFound) {
             Write-Warning "Project not found. Try again."
         } else {
-            $conditionSearch = "project/name like '$projectFound'"
+            $conditionSearch = "project/id = $parentProjectID"
         }
     } until ($projectFound)
 
@@ -71,7 +71,7 @@ do {
     }
 
     # Project tickets
-    $projectTickets = Get-CWMProjectTicket -condition $conditionSearch
+    $projectTickets = Get-CWMProjectTicket -condition $conditionSearch -all
     $projectTickets = foreach ($ticket in $projectTickets) {
         [pscustomobject]@{
             WBS           = $ticket.wbsCode
@@ -90,7 +90,7 @@ do {
     $ticketTasks = foreach ($task in $ticketTasks) {
         [pscustomobject]@{
             Type     = "Task"
-            Summary  = $task.notes
+            Summary  = ($task.notes | Out-String).Trim()
             Priority = $task.priority
             TicketID = $task.ticketId
         }
@@ -104,7 +104,7 @@ do {
     $ticketInternalNotes = foreach ($intNote in $ticketInternalNotes) {
         [pscustomobject]@{
             Type     = "Internal Note"
-            Summary  = $intNote.text
+            Summary  = ($intNote.text | Out-String).Trim()
             TicketID = $intNote.ticketId
         }
     }
@@ -113,36 +113,36 @@ do {
     $ticketDescriptionNotes = foreach ($descNote in $ticketDescriptionNotes) {
         [pscustomobject]@{
             Type     = "Description Note"
-            Summary  = $descNote.text
+            Summary  = ($descNote.text | Out-String).Trim()
             TicketID = $descNote.ticketId
         }
     }
 
-    # Build our Work Plan for export
+    # Build the Work Plan for export
     # Sorting by WBS code allows us to insert all tasks and notes sequentially based on item type
-    $projectWorkPlan = [System.Collections.ArrayList]@()
-    $combinedObjects = ($projectPhases + $projectTickets) | Sort-Object -Property WBS
+    [List[object]]$projectWorkPlan = @()
+    $combinedObjects = ($projectPhases + $projectTickets) | Sort-Object {[regex]::Replace($_.WBS, '\d+', {$args[0].Value.PadLeft(20)})}
 
     foreach ($item in $combinedObjects) {
         if ($item.Type -eq 'Phase') {
-            $projectWorkPlan += $item
+            $projectWorkPlan.Add($item)
             continue
         }
         if ($item.Type -eq 'Ticket') {
             $projectWorkPlan += $item
             foreach ($task in $ticketTasks) {
                 if ($task.TicketID -eq $item.TicketID) {
-                    $projectWorkPlan += $task
+                    $projectWorkPlan.Add($task)
                 }
             }
             foreach ($intNote in $ticketInternalNotes) {
                 if ($intNote.TicketID -eq $item.TicketID) {
-                    $projectWorkPlan += $intNote
+                    $projectWorkPlan.Add($intNote)
                 }
             }
             foreach ($descNote in $ticketDescriptionNotes) {
                 if ($descNote.TicketID -eq $item.TicketID) {
-                    $projectWorkPlan += $descNote
+                    $projectWorkPlan.Add($descNote)
                 }
             }
         }
@@ -151,17 +151,15 @@ do {
     # Create the Windows form object
     Add-Type -AssemblyName System.Windows.Forms
     $fileBrowser = New-Object System.Windows.Forms.SaveFileDialog -Property @{
-        # Using the Desktop location as a starting point
-        InitialDirectory = [Environment]::GetFolderPath('Desktop')
+        Title            = "Save file"
+        FileName         = "Project Work Plan #$parentProjectID"
+        InitialDirectory = "$env:USERPROFILE\Downloads"
         Filter           = 'CSV (*.csv)|*.csv'
     }
 
     # Prompt to save
     Write-Host ""
-    Write-Host "Export and save the CSV file...`n"
-    $fileBrowser.Title = "Save file"
-    $fileBrowser.FileName = $parentProjectID
-    $fileBrowser.InitialDirectory = "$env:USERPROFILE\Downloads"
+    Write-Host "Saving the CSV file...`n"
     $null = $fileBrowser.ShowDialog()
     if ([string]::IsNullOrEmpty($fileBrowser.FileName)) {
         throw "File not saved. Exiting script."
@@ -172,11 +170,8 @@ do {
     $columnHeaders = @("WBS", "Type", "Summary", "Time Budget", "Priority", "TicketURL")
     $projectWorkPlan | Select-Object $columnHeaders | Export-Csv -Path $fileLocation -NoTypeInformation
 
-
-    Write-Host ""
-    Write-Host "Project work plan exported and saved successfully! (#$($parentProjectID))" -ForegroundColor Green
-
-    ii $fileLocation
+    Write-Host "Project Work Plan #$($parentProjectID) saved successfully!" -ForegroundColor Green
+    Invoke-Item -Path $fileLocation
 
     $response = Read-Host "Would you like to run again? (Y|N)"
 } until ($response -eq 'n')
