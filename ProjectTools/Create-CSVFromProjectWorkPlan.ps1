@@ -52,7 +52,7 @@ do {
     # Prompt for the project ID and confirm it exists
     do {
         $parentProjectID = Read-Host "Provide the Project ID of the Manage Project you want to generate a CSV export of"
-        $projectFound = Get-CWMProject -id $parentProjectID -ErrorAction SilentlyContinue | Select-Object -ExpandProperty id
+        $projectFound = Get-CWMProject -id $parentProjectID -ErrorAction SilentlyContinue
         if (-not $projectFound) {
             Write-Warning "Project not found. Try again."
         } else {
