@@ -177,5 +177,5 @@ do {
 } until ($response -eq 'n')
 
 # Remove sensitive variables
-$varsToClear = @('privateAPIKey', 'clientID')
+$varsToClear = @('privateAPIKey', 'clientID', 'connection')
 Remove-Variable $varsToClear -ErrorAction SilentlyContinue
