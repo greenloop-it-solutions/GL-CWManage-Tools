@@ -4,12 +4,12 @@
 # 2022-02-15 version 1.1
 using namespace System.Runtime.InteropServices
 
-$companyNameMatch = Read-Host "Provide just the FIRST PART of company name"
-$projectNameMatch = Read-Host "Provide the EXACT Project Name"
-
 $cwCompanyName = Read-Host "ConnectWise Company ID"
 $cwAPIPublicKey = Read-Host "Please provide your API public key"
 $cwAPIPrivateKey = Read-Host "Please provide your API private key" -AsSecureString
+
+$companyNameMatch = Read-Host "Provide just the FIRST PART of company name"
+$projectNameMatch = Read-Host "Provide the EXACT Project Name"
 
 $BasicKey = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(
     $cwCompanyName + "+" + $cwAPIPublicKey + ":" + [Marshal]::PtrToStringAuto([Marshal]::SecureStringToBSTR($cwAPIPrivateKey))
@@ -45,13 +45,19 @@ foreach ($ticket in $tickets) {
         $newsummary = $wbsCode + " " + $summary
     }
 
-    $body = @{
+    $body = @()
+    $body += (@{
         op    = "replace"
         path  = "summary"
         value = $newsummary
-    } | ConvertTo-Json
+    })
+    $body += (@{
+        op    = "replace"
+        path  = "type"
+        value = ""
+    })
 
-    $body = "[$body]"
+    $body = $body | ConvertTo-Json
 
     Invoke-RestMethod "https://connect.greenloopsolutions.com/v4_6_release/apis/3.0/project/tickets/$($ticket.id)" -Method Patch -Headers $headers -Body $body
 }
