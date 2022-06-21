@@ -1,7 +1,13 @@
-#Script: This script finds all tickets for a specified project and updates them so that the WBS Code is prefixed to the Summary.
-# Stephen Moody
-# GreenLoop IT Solutions
-# 2022-02-15 version 1.1
+<#
+.SYNOPSIS
+    Ensures all project ticket summaries begin with WBS Code.
+.DESCRIPTION
+    This script finds all tickets for a specified project and updates them so that the WBS Code is prefixed to the Summary.
+.NOTES
+    Company: GreenLoop IT Solutions
+    Version 1.2 2022-06-21    
+#>
+
 using namespace System.Runtime.InteropServices
 
 $manageServerFqdn = Read-Host "Manage Server FQDN"
