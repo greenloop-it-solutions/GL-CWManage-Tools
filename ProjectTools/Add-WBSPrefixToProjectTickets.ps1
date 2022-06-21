@@ -4,6 +4,7 @@
 # 2022-02-15 version 1.1
 using namespace System.Runtime.InteropServices
 
+$manageServerFqdn = Read-Host "Manage Server FQDN"
 $cwCompanyName = Read-Host "ConnectWise Company ID"
 $cwAPIPublicKey = Read-Host "Please provide your API public key"
 $cwAPIPrivateKey = Read-Host "Please provide your API private key" -AsSecureString
@@ -29,35 +30,42 @@ do {
 } until ($validGuid)
 $headers.Add("clientid", $clientID)
 
-$tickets = Invoke-RestMethod "https://connect.greenloopsolutions.com/v4_6_release/apis/3.0/project/tickets?conditions=company/name LIKE '$companyNameMatch*' AND project/name = '$projectNameMatch'" -Method 'GET' -Headers $headers
+do {
+    $tickets = Invoke-RestMethod "https://$($manageServerFqdn)/v4_6_release/apis/3.0/project/tickets?conditions=company/name LIKE '$companyNameMatch*' AND project/name = '$projectNameMatch'" -Method 'GET' -Headers $headers
 
-foreach ($ticket in $tickets) {
-    $wbsCode = $ticket.wbsCode
-    $summary = $ticket.summary
+    foreach ($ticket in $tickets) {
+        $wbsCode = $ticket.wbsCode
+        $summary = $ticket.summary
 
-    #insert regex to match for current WBS Code here
-    if ($ticket.summary -match "^[0-9].[0-9]*") {
-        if ($matches[0] -eq $wbsCode) {
-            continue;
+        #insert regex to match for current WBS Code here
+        if ($ticket.summary -match "^[0-9].[0-9]*") {
+            if ($matches[0] -eq $wbsCode) {
+                continue;
+            }
+            $newsummary = $summary -replace '^[0-9].[0-9]*', "$wbsCode"
+        } else {
+            $newsummary = $wbsCode + " " + $summary
         }
-        $newsummary = $summary -replace '^[0-9].[0-9]*', "$wbsCode"
-    } else {
-        $newsummary = $wbsCode + " " + $summary
+
+        $body = @()
+        $body += (@{
+            op    = "replace"
+            path  = "summary"
+            value = $newsummary
+        })
+        $body += (@{
+            op    = "replace"
+            path  = "type"
+            value = ""
+        })
+
+        $body = $body | ConvertTo-Json
+
+        Invoke-RestMethod "https://$($manageServerFqdn)/v4_6_release/apis/3.0/project/tickets/$($ticket.id)" -Method Patch -Headers $headers -Body $body
     }
+    $response = Read-Host "Would you like to run again? (Y|N)"
+} until ($response -eq 'n')
 
-    $body = @()
-    $body += (@{
-        op    = "replace"
-        path  = "summary"
-        value = $newsummary
-    })
-    $body += (@{
-        op    = "replace"
-        path  = "type"
-        value = ""
-    })
-
-    $body = $body | ConvertTo-Json
-
-    Invoke-RestMethod "https://connect.greenloopsolutions.com/v4_6_release/apis/3.0/project/tickets/$($ticket.id)" -Method Patch -Headers $headers -Body $body
-}
+# Remove sensitive variables
+$varsToClear = @('cwAPIPrivateKey', 'clientID')
+Remove-Variable $varsToClear -ErrorAction SilentlyContinue
