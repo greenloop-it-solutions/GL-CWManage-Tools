@@ -47,7 +47,8 @@ function New-TicketFromTemplate {
     )
 
     $companyNameString = $CSVline.organization -replace "&", "%26" -replace "'", "\'"
-    $companyId = (Get-CWMCompany -condition "name like '$companyNameString'").id
+    $companyId = (Get-CWMCompany -condition "(name like '$companyNameString*') and (status/name = 'Active') and (deletedFlag = false)").id
+    if(!$companyId) {$companyId = 2 }
     $ticketSummary = $templateTicket.summary
     $ticketId = $templateTicket.id
 
